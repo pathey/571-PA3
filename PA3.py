@@ -17,17 +17,24 @@ class Task:
 	period: int			#deadline/period in seconds
 	wcet: Dict[int, int]		#worst-case execution time at a given frequency
 
-def EDF_schedule():
-	pass
-
 def RM_scheduler():
-	pass
+	print("Running RM Scheduler")
+
+def EDF_scheduler():
+	print("Running EDF Scheduler")
 
 def EE_EDF_scheduler():
-	pass
+	print("Running Energy Efficient EDF Scheduler")
 
 def EE_RM_scheduler():
-	pass
+	print("Running Energy Efficient RM Scheduler")
+
+dispatch = {
+	("RM", None):RM_scheduler,
+	("EDF", None): EDF_scheduler,
+	("EDF", "EE"): EE_EDF_scheduler,
+	("RM", "EE"): EE_RM_scheduler
+}
 
 def system_constructor(system_line) -> SystemConfig:
 	parts = system_line.split()
@@ -49,12 +56,31 @@ def system_constructor(system_line) -> SystemConfig:
 		idle_power = idle_power
 	)
 
-def task_constructor(task_line):
-	pass
+def task_constructor(task_line) -> Task:
+	parts = task_line.split()
+
+	name = parts[0]
+	period = int(parts[1])
+	wcet = {
+		1188:int(parts[2]),
+		918:int(parts[3]),
+		648:int(parts[4]),
+		384:int(parts[5])
+	}
+
+	return Task(
+		name = name,
+		period = period,
+		wcet = wcet
+	)
+
+
 
 input_file = sys.argv[1]
 policy = sys.argv[2]
 energy_efficient = None
+
+tasks = []
 
 if len(sys.argv) > 3:
 	energy_efficient = sys.argv[3]
@@ -64,6 +90,10 @@ with open(input_file, "r") as f:
 	sys_conf = system_constructor(system_line)
 
 	for line in f:
-		task_constructor(line)
+		tasks.append(task_constructor(line))
 
-print(sys_conf)
+#print(sys_conf)
+#print(tasks)
+
+scheduler = dispatch[(policy, energy_efficient)]
+scheduler()

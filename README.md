@@ -1,4 +1,4 @@
-Requires numpy, dataclasses, and typing through pip.
+For required packages run pip install -r requirements.txt
 
 Run via python3:
 
