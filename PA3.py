@@ -53,11 +53,11 @@ def RM_scheduler():
 
 		
 
-		if scheduleTime_RM + runTime >= 1000 and (not stopScheduling_RM): #replace 1000 is given max execution time
-			scheduleList_RM.append([scheduleTime_RM, taskName, CPU_Freq, 1000 - scheduleTime_RM, joules]) #replace 1000 is given max execution time
+		if scheduleTime_RM + runTime >= 1000 and (not stopScheduling_RM): #1000 is given max execution time
+			scheduleList_RM.append([scheduleTime_RM, taskName, CPU_Freq, 1000 - scheduleTime_RM, joules]) #1000 is given max execution time
 			scheduleList_RM.append(["EXECUTION TIME ENDS, VALUES BELOW ARE TOTALS"])
-			scheduleList_RM.append(["Execution Time: ", 1000]) #replace 1000 is given max execution time
-			scheduleList_RM.append(["Percentage Idle Time: ", round(((idleTime_RM / 1000) * 100), 3), "%"]) #replace 1000 is given max execution time
+			scheduleList_RM.append(["Execution Time: ", 1000]) #1000 is given max execution time
+			scheduleList_RM.append(["Percentage Idle Time: ", round(((idleTime_RM / 1000) * 100), 3), "%"]) #1000 is given max execution time
 			scheduleList_RM.append(["Total Energy Consumption: ", (round(joulesTotal_RM, 3)), "J"])
 			stopScheduling_RM = True
 		elif not stopScheduling_RM:
