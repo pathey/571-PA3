@@ -9,7 +9,6 @@ class SystemConfig:
 	task_quantity: int		#of tasks in the system
 	time_limit: int			#how long the system should run for in seconds
 	active_power: Dict[int, int]	#active CPU power in mW at a given frequency
-	idle_power: int			#idle CPU power at the lowest frequency
 
 @dataclass
 class Task:
@@ -17,6 +16,7 @@ class Task:
 	period: int			#period in seconds
 	next_deadline: int		#next deadline (changes throughout the run)
 	time_remaining: int		#remaining time of execution
+	status: str			#track whether the task is in the system or waiting to "arrive" again
 	wcet: Dict[int, int]		#worst-case execution time at a given frequency
 
 tasks = []
@@ -31,23 +31,38 @@ def RM_scheduler():
 def EDF_scheduler():
 	print("Running EDF Scheduler")
 	for task in tasks:
-		time_remaining = task.wcet[1188]
-	upcoming_deadline = 1001
-	current_task = None
+		task.time_remaining = task.wcet[1188]
+		#print(task)
+	upcoming_deadline = sys.maxsize
+	current_task = None 
 	schedule = []				#2D array that stores the task executed at a given second and the CPU frequency it is executed at
+	sys_status = None
 	for i in range(1, 1001):
 		for task in tasks:
-			if task.next_deadline < upcoming_deadline:
+			if i < task.next_deadline and task.next_deadline <= upcoming_deadline and task.status == "ready":
 				upcoming_deadline = task.next_deadline
 				current_task = task
-		schedule.append((current_task.name, 1188))
-		if current_task.time_remaining > 0:
-			current_task.time_remaining -= 1
-			print(current_task.time_remaining)
+				sys_status = "BUSY"
+			elif i >= task.next_deadline:
+				task.next_deadline += task.period
+				task.status = "ready"
+		
+		if sys_status == "IDLE":
+			schedule.append((sys_status, 0))
 		else:
-			current_task.time_remaining = current_task.wcet[1188]
-			current_task.next_deadline = current_task.next_deadline + current_task.period
-			print(current_task.next_deadline)
+			print(f"Current Task: {current_task.name}")
+			schedule.append((current_task.name, 1188))
+			
+			if current_task.time_remaining > 1:
+				current_task.time_remaining -= 1
+				print(f"{current_task.name} time remaining: {current_task.time_remaining}")
+			else:
+				current_task.time_remaining = current_task.wcet[1188]
+				current_task.status = "completed"
+				upcoming_deadline = sys.maxsize
+				sys_status = "IDLE"
+				#print(f"{current_task.name} next deadline: {current_task.next_deadline}")
+
 	#print(schedule)
 	return schedule
 
@@ -73,15 +88,14 @@ def system_constructor(system_line) -> SystemConfig:
 		1188:int(parts[2]), 
 		918:int(parts[3]), 
 		648:int(parts[4]), 
-		384:int(parts[5])
+		384:int(parts[5]),
+		0:int(parts[6])
 	}
-	idle_power = int(parts[6])
 
 	return SystemConfig(
 		task_quantity = task_quantity,
 		time_limit=time_limit,
-		active_power = active_power,
-		idle_power = idle_power
+		active_power = active_power
 	)
 
 def task_constructor(task_line) -> Task:
@@ -90,6 +104,7 @@ def task_constructor(task_line) -> Task:
 	name = parts[0]
 	period = int(parts[1])
 	next_deadline = int(parts[1])
+	status = "ready"
 	wcet = {
 		1188:int(parts[2]),
 		918:int(parts[3]),
@@ -102,6 +117,7 @@ def task_constructor(task_line) -> Task:
 		period = period,
 		next_deadline = next_deadline,
 		time_remaining = 0,
+		status = status,
 		wcet = wcet
 	)
 
@@ -119,8 +135,11 @@ def executor(schedule):
 			c_t_energy = sys_conf.active_power[schedule[0][1]]
 			total_energy += c_t_energy
 		else:
-			if schedule[i-1][0] == c_t_name:
-				print(f"{c_t_start_time} {c_t_name} {schedule[i-1][1]} {c_t_exec_time} {c_t_energy}mJ")
+			if schedule[i-1][0] != c_t_name:
+				if c_t_name == "IDLE":
+					print(f"{c_t_start_time} {c_t_name} IDLE {c_t_exec_time} {c_t_energy}mJ")
+				else:
+					print(f"{c_t_start_time} {c_t_name} {schedule[i-1][1]} {c_t_exec_time} {c_t_energy}mJ")
 				c_t_name = schedule[i-1][0]
 				c_t_start_time = i-1
 				c_t_exec_time = 0
@@ -152,4 +171,4 @@ schedule = []
 scheduler = dispatch[(policy, energy_efficient)]
 schedule = scheduler()
 
-#executor(schedule)
+executor(schedule)
