@@ -38,22 +38,106 @@ def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq = 1188):
     scheduleTime_RM += runTime
     joulesTotal_RM += joules
     
-    
+indexW0 = 5
+indexW1 = 5
+indexW2 = 5
+indexW3 = 5
+indexW4 = 5
 
-def RMScheduleCheck(numTasks_RM, taskList_RM):
+def RMEEScheduleCheck(numTasks_RM, taskList_RM):
     RM_Limit = numTasks_RM * (pow(2, (1 / numTasks_RM)) - 1)
-    RM_TaskSum = 0
-
-    for i in range(len(taskList_RM)):
-        RM_TaskSum += (taskList_RM[i][2] / taskList_RM[i][1]) #Ci / Ti
+    RM_TaskSum = RM_Limit + 1
+    global indexW0
+    global indexW1
+    global indexW2
+    global indexW3
+    global indexW4
+    execTimeIndex = 0   #index of slowest execution time that can be sped up
     
+
+    # for i in range(len(taskList_RM)):
+    #     for j in range(4):              #4 clock freq are given
+    #         RM_TaskSum += (taskList_RM[i][2] / taskList_RM[i][1]) #Ci / Ti
+
+    #     RM_TaskSum += (taskList_RM[i][2] / taskList_RM[i][1]) #Ci / Ti
+    execTimes = [
+    taskList_RM[0][indexW0],
+    taskList_RM[1][indexW1],
+    taskList_RM[2][indexW2],
+    taskList_RM[3][indexW3],
+    taskList_RM[4][indexW4],
+    ]
+    execTimes.sort(reverse=True)        #execTimes[0] will always be longest exec time
+
+    while (not (RM_TaskSum <= RM_Limit)):   #while the RM equality is not met keep looking for how to meet it
+
+
+        #if largest execution time is at task w reduce index by 1 to make execution faster by 1 step
+
+        
+
+        RM_TaskSum = 0  #reset calculation to check properly
+
+        for index in range(len(taskList_RM)):
+            if index == 0:
+                if (execTimes[execTimeIndex] == taskList_RM[index][indexW0]) and indexW0 > 2: 
+                    indexW0 -= 1
+                RM_TaskSum += taskList_RM[index][indexW0] / taskList_RM[index][1]
+            elif index == 1:
+                if (execTimes[execTimeIndex] == taskList_RM[index][indexW1]) and indexW1 > 2:
+                    indexW1 -= 1
+                RM_TaskSum += taskList_RM[index][indexW1] / taskList_RM[index][1]
+            elif index == 2:
+                if (execTimes[execTimeIndex] == taskList_RM[index][indexW2]) and indexW2 > 2:
+                    indexW2 -= 1
+                RM_TaskSum += taskList_RM[index][indexW2] / taskList_RM[index][1]
+            elif index == 3:
+                if (execTimes[execTimeIndex] == taskList_RM[index][indexW3]) and indexW3 > 2:
+                    indexW3 -= 1
+                RM_TaskSum += taskList_RM[index][indexW3] / taskList_RM[index][1]
+            elif index == 4:
+                if (execTimes[execTimeIndex] == taskList_RM[index][indexW4]) and indexW4 > 2:
+                    indexW4 -= 1
+                RM_TaskSum += taskList_RM[index][indexW4] / taskList_RM[index][1]
+        
+        execTimes = [
+        taskList_RM[0][indexW0],
+        taskList_RM[1][indexW1],
+        taskList_RM[2][indexW2],
+        taskList_RM[3][indexW3],
+        taskList_RM[4][indexW4],
+        ]
+        execTimes.sort(reverse=True)        #execTimes[0] will always be longest exec time
+
+        for i in range(len(taskList_RM)):
+            if i == 0 and execTimes[execTimeIndex] == taskList_RM[i][indexW0] and indexW0 == 2 and execTimeIndex < 4:
+                execTimeIndex += 1
+            elif i == 1 and execTimes[execTimeIndex] == taskList_RM[i][indexW1] and indexW1 == 2 and execTimeIndex < 4:
+                execTimeIndex += 1
+            elif i == 2 and execTimes[execTimeIndex] == taskList_RM[i][indexW2] and indexW2 == 2 and execTimeIndex < 4:
+                execTimeIndex += 1
+            elif i == 3 and execTimes[execTimeIndex] == taskList_RM[i][indexW3] and indexW3 == 2 and execTimeIndex < 4:
+                execTimeIndex += 1
+            elif i == 4 and execTimes[execTimeIndex] == taskList_RM[i][indexW4] and indexW4 == 2 and execTimeIndex < 4:
+                execTimeIndex += 1
+        
+        
+        
+        if indexW0 == indexW1 == indexW2 == indexW3 == indexW4 == 2:
+            break
+        
+    print(execTimes)
+    print(execTimeIndex)
+    print(indexW0, indexW1, indexW2, indexW3, indexW4)
     print("RM_TaskSum = ", round(RM_TaskSum, 3))
     print("RM_Limit = ", round(RM_Limit, 3))
     if RM_TaskSum <= RM_Limit:
         print("RM Schedule Is VALID")
+        print("\n")
         return True
     else:
         print("RM Schedule Is INVALID")
+        print("\n")
         return False
 
 
@@ -82,7 +166,7 @@ numTasks_RM = taskInfo_RM[0][0]
 taskList_RM = taskInfo_RM[1:]
 taskList_RM.sort(key = lambda task: task[1])   #sort by earliest deadline first
 
-if RMScheduleCheck(numTasks_RM, taskList_RM):     #Is RM a valid scheduling method for our task list? if yes proceed
+if RMEEScheduleCheck(numTasks_RM, taskList_RM):     #Is RM a valid scheduling method for our task list? if yes proceed
     for i in range(len(taskList_RM)):          #compute hyperPeriod_RM
         periodList_RM.append(taskList_RM[i][1])
 
@@ -117,6 +201,8 @@ if RMScheduleCheck(numTasks_RM, taskList_RM):     #Is RM a valid scheduling meth
         for index, item in enumerate(line):
             line[index] = str(item)
         print(" ".join(line))
+    
+    print(taskList_RM)
 
 
 
