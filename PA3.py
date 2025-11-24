@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass
 from typing import Dict, List
 import sys
+import math
 
 @dataclass
 class SystemConfig:
@@ -30,14 +31,18 @@ def RM_scheduler():
 
 def EDF_scheduler():
 	print("Running EDF Scheduler")
+	periods = []
 	for task in tasks:
 		task.time_remaining = task.wcet[1188]
+		periods.append(task.period)
 		#print(task)
+	hyper_period = math.lcm(*periods)
 	upcoming_deadline = sys.maxsize
 	current_task = None 
 	schedule = []				#2D array that stores the task executed at a given second and the CPU frequency it is executed at
 	sys_status = None
-	for i in range(1, 1001):
+	
+	for i in range(1, hyper_period):
 		for task in tasks:
 			if i < task.next_deadline and task.next_deadline <= upcoming_deadline and task.status == "ready":
 				upcoming_deadline = task.next_deadline
@@ -50,12 +55,12 @@ def EDF_scheduler():
 		if sys_status == "IDLE":
 			schedule.append((sys_status, 0))
 		else:
-			print(f"Current Task: {current_task.name}")
+			#print(f"Current Task: {current_task.name}")
 			schedule.append((current_task.name, 1188))
 			
 			if current_task.time_remaining > 1:
 				current_task.time_remaining -= 1
-				print(f"{current_task.name} time remaining: {current_task.time_remaining}")
+				#print(f"{current_task.name} time remaining: {current_task.time_remaining}")
 			else:
 				current_task.time_remaining = current_task.wcet[1188]
 				current_task.status = "completed"
@@ -127,7 +132,7 @@ def executor(schedule):
 	c_t_exec_time = 0	#how long currently/most recently run task ran for
 	c_t_start_time = 0	#when the current/most recently run task started
 	c_t_name = None
-	for i in range(1, 1001):
+	for i in range(1, 1002):
 		if i == 1:
 			c_t_name = schedule[0][0]
 			c_t_start_time = i-1
@@ -135,11 +140,11 @@ def executor(schedule):
 			c_t_energy = sys_conf.active_power[schedule[0][1]]
 			total_energy += c_t_energy
 		else:
-			if schedule[i-1][0] != c_t_name:
+			if schedule[i-1][0] != c_t_name or i > 1000:
 				if c_t_name == "IDLE":
 					print(f"{c_t_start_time} {c_t_name} IDLE {c_t_exec_time} {c_t_energy}mJ")
 				else:
-					print(f"{c_t_start_time} {c_t_name} {schedule[i-1][1]} {c_t_exec_time} {c_t_energy}mJ")
+					print(f"{c_t_start_time} {c_t_name} {schedule[i-2][1]} {c_t_exec_time} {c_t_energy}mJ")
 				c_t_name = schedule[i-1][0]
 				c_t_start_time = i-1
 				c_t_exec_time = 0
