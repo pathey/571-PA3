@@ -2,3 +2,4 @@ dataclasses
 numpy
 typing
 math
+itertools
