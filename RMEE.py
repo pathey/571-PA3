@@ -8,7 +8,7 @@ idleTime_RMEE = 0
 joulesTotal_RMEE = 0
 stopScheduling_RMEE = False
 
-def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq = 1188):
+def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq_index = 2):
     #CPU_Power given in mW
     #CPU_Freq given in MHz
     global scheduleTime_RMEE
@@ -17,8 +17,21 @@ def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq = 1188):
     global joulesTotal_RMEE
     global stopScheduling_RMEE
 
+    match CPU_Freq_index:
+        case 2:
+            CPU_Freq = 1188
+        case 3:
+            CPU_Freq = 918
+        case 4:
+            CPU_Freq = 648
+        case 5:
+            CPU_Freq = 384
+        case _:
+            CPU_Freq = 1188
+
     if taskName == "IDLE":
         joules = (taskInfo_RMEE[0][6] * 0.001) * runTime #taskInfo_RMEE[0][6] is IDLE CPU_Power at lowest freq
+        CPU_Freq = "IDLE"
         idleTime_RMEE += runTime
     else:
         joules = (CPU_Power * 0.001) * runTime      #CPU_power given in mW
@@ -26,14 +39,14 @@ def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq = 1188):
     
 
     if scheduleTime_RMEE + runTime >= 1000 and (not stopScheduling_RMEE): #1000 is given max execution time
-        scheduleList_RMEE.append([scheduleTime_RMEE, taskName, CPU_Freq, 1000 - scheduleTime_RMEE, joules]) #1000 is given max execution time
+        scheduleList_RMEE.append([scheduleTime_RMEE, taskName, CPU_Freq, 1000 - scheduleTime_RMEE, round(joules, 3)]) #1000 is given max execution time
         scheduleList_RMEE.append(["EXECUTION TIME ENDS, VALUES BELOW ARE TOTALS"])
         scheduleList_RMEE.append(["Execution Time: ", 1000]) #1000 is given max execution time
         scheduleList_RMEE.append(["Percentage Idle Time: ", round(((idleTime_RMEE / 1000) * 100), 3), "%"]) #1000 is given max execution time
         scheduleList_RMEE.append(["Total Energy Consumption: ", (round(joulesTotal_RMEE, 3)), "J"])
         stopScheduling_RMEE = True
     elif not stopScheduling_RMEE:
-        scheduleList_RMEE.append([scheduleTime_RMEE, taskName, CPU_Freq, runTime, joules])
+        scheduleList_RMEE.append([scheduleTime_RMEE, taskName, CPU_Freq, runTime, round(joules, 3)])
 
     scheduleTime_RMEE += runTime
     joulesTotal_RMEE += joules
@@ -43,6 +56,7 @@ indexW1 = 5
 indexW2 = 5
 indexW3 = 5
 indexW4 = 5
+
 
 def RMEEScheduleCheck(numTasks_RMEE, taskList_RMEE):
     RMEE_Limit = numTasks_RMEE * (pow(2, (1 / numTasks_RMEE)) - 1)
@@ -146,8 +160,8 @@ periodList_RMEE = []
 taskList_RMEE = []
 numTasks_RMEE = 0
 currentTaskIndex_RMEE = 0
-lockRM = False
-lockRMTime = 0
+lockRMEE = False
+lockRMEETime = 0
 
 input1 = open(sys.argv[1])  #the first argument should be the name of the txt file to open
 
@@ -164,7 +178,7 @@ for line in lines:          #create taskInfo_RMEE array from txt file
 
 numTasks_RMEE = taskInfo_RMEE[0][0]
 taskList_RMEE = taskInfo_RMEE[1:]
-taskList_RMEE.sort(key = lambda task: task[1])   #sort by earliest deadline first
+# taskList_RMEE.sort(key = lambda task: task[1])   #sort by earliest deadline first
 
 if RMEEScheduleCheck(numTasks_RMEE, taskList_RMEE):     #Is RM a valid scheduling method for our task list? if yes proceed
     for i in range(len(taskList_RMEE)):          #compute hyperPeriod_RMEE
@@ -172,30 +186,46 @@ if RMEEScheduleCheck(numTasks_RMEE, taskList_RMEE):     #Is RM a valid schedulin
 
     hyperPeriod_RMEE = math.lcm(*periodList_RMEE)
 
+    RMEEtaskList = []
+    curr_index = [indexW0, indexW1, indexW2, indexW3, indexW4]
+
+    for i in range(len(taskList_RMEE)):
+        task_row = []  
+        for j in range(3):
+            if j != 2:
+                task_row.append(taskList_RMEE[i][j])
+            else:
+                task_row.append(taskList_RMEE[i][curr_index[i]])
+        RMEEtaskList.append(task_row) 
+
+    print(RMEEtaskList) 
+
+    RMEEtaskList.sort(key= lambda task: task[1])    #sort by earliest deadline first
+
     for i in range(taskInfo_RMEE[0][1]):
 
-        if (i % taskList_RMEE[0][1]) == 0 and not lockRM:
-            schedule(taskList_RMEE[currentTaskIndex_RMEE][0], taskList_RMEE[currentTaskIndex_RMEE][2])
-            lockRM = True
-            lockRMTime = taskList_RMEE[currentTaskIndex_RMEE][2]   #lockRM the schedule for the duration of task
+        if (i % RMEEtaskList[0][1]) == 0 and not lockRMEE:
+            schedule(RMEEtaskList[currentTaskIndex_RMEE][0], RMEEtaskList[currentTaskIndex_RMEE][2], taskInfo_RMEE[0][curr_index[currentTaskIndex_RMEE]], curr_index[currentTaskIndex_RMEE])
+            lockRMEE = True
+            lockRMEETime = RMEEtaskList[currentTaskIndex_RMEE][2]   #lockRMEE the schedule for the duration of task
             currentTaskIndex_RMEE += 1
 
-        elif (not lockRM) and (currentTaskIndex_RMEE <= 4):
-            schedule(taskList_RMEE[currentTaskIndex_RMEE][0], taskList_RMEE[currentTaskIndex_RMEE][2])
-            lockRM = True
-            lockRMTime = taskList_RMEE[currentTaskIndex_RMEE][2]   #lockRM the schedule for the duration of task
+        elif (not lockRMEE) and (currentTaskIndex_RMEE <= 4):
+            schedule(RMEEtaskList[currentTaskIndex_RMEE][0], RMEEtaskList[currentTaskIndex_RMEE][2], taskInfo_RMEE[0][curr_index[currentTaskIndex_RMEE]], curr_index[currentTaskIndex_RMEE])
+            lockRMEE = True
+            lockRMEETime = RMEEtaskList[currentTaskIndex_RMEE][2]   #lockRMEE the schedule for the duration of task
             currentTaskIndex_RMEE += 1
         
-        elif (not lockRM) and (currentTaskIndex_RMEE > 4):
-            idleTime_RMEEScheduled = taskList_RMEE[0][1] - i % taskList_RMEE[0][1]
+        elif (not lockRMEE) and (currentTaskIndex_RMEE > 4):
+            idleTime_RMEEScheduled = RMEEtaskList[0][1] - i % RMEEtaskList[0][1]
             schedule("IDLE", idleTime_RMEEScheduled)
-            lockRM = True
-            lockRMTime = idleTime_RMEEScheduled   #lockRM the schedule for the duration of task
+            lockRMEE = True
+            lockRMEETime = idleTime_RMEEScheduled   #lockRMEE the schedule for the duration of task
             currentTaskIndex_RMEE = 0
         
-        lockRMTime = lockRMTime - 1
-        if lockRMTime == 0:
-            lockRM = False
+        lockRMEETime = lockRMEETime - 1
+        if lockRMEETime == 0:
+            lockRMEE = False
 
     for line in scheduleList_RMEE:
         for index, item in enumerate(line):
