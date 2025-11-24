@@ -155,59 +155,7 @@ def RM_scheduler():
 		pass
 
 	input1.close()
-		
-'''
-def EDF_scheduler(task_modes = None):
-	if task_modes is None:
-		task_modes = {task.name: 1188 for task in tasks}
-	else:
-		task_modes = {tasks[i].name: task_modes[i] for i in range(len(tasks))}
-	#print("Running EDF Scheduler")
-	periods = []
-	for task in tasks:
-		task.time_remaining = task.wcet[task_modes[task.name]]
-		periods.append(task.period)
-		#print(task)
-	hyper_period = math.lcm(*periods)
-	upcoming_deadline = sys.maxsize
-	current_task = None 
-	schedule = []				#2D array that stores the task executed at a given second and the CPU frequency it is executed at
-	sys_status = None
-	
-	for i in range(1, hyper_period):
-		for task in tasks:
-			if i < task.next_deadline and task.next_deadline <= upcoming_deadline and task.status == "ready":
-				upcoming_deadline = task.next_deadline
-				current_task = task
-				sys_status = "BUSY"
-			elif i >= task.next_deadline and task.time_remaining != 1:
-				return "No valid schedule"
-			elif i >= task.next_deadline:
-				task.next_deadline += task.period
-				task.status = "ready"
-		
-		if sys_status == "IDLE":
-			schedule.append((sys_status, 0))
-		else:
-			#print(f"Current Task: {current_task.name}")
-			schedule.append((current_task.name, task_modes[current_task.name]))
-			
-			if current_task.time_remaining > 1:
-				if(current_task.next_deadline < i):
-					bad_timing = "No valid schedule"
-					return bad_timing
-				current_task.time_remaining -= 1
-				#print(f"{current_task.name} time remaining: {current_task.time_remaining}")
-			else:
-				current_task.time_remaining = current_task.wcet[task_modes[current_task.name]]
-				current_task.status = "completed"
-				upcoming_deadline = sys.maxsize
-				sys_status = "IDLE"
-				#print(f"{current_task.name} next deadline: {current_task.next_deadline}")
 
-	#print(schedule)
-	return schedule
-'''
 def EDF_scheduler(task_modes=None):
     # Map task names -> frequency mode
     if task_modes is None:
@@ -215,50 +163,42 @@ def EDF_scheduler(task_modes=None):
     else:
         task_modes = {tasks[i].name: task_modes[i] for i in range(len(tasks))}
 
-    # Make sure tasks are in a known initial state
+    # Reset tasks to a clean initial state
     for task in tasks:
-        task.next_deadline = task.period     # first deadline at end of first period
-        task.time_remaining = 0              # no job released yet
-        task.status = "ready"                # ready to get first job
+        task.time_remaining = 0          # no job active yet
+        task.next_deadline = task.period # first job deadline at end of first period
+        task.status = "ready"
 
-    # Using hyperperiod
-    
-    periods = []
-    for task in tasks:
-        task.time_remaining = task.wcet[task_modes[task.name]]
-        periods.append(task.period)
-        #print(task)
+    # calculating and using hyperperiod
+    periods = [task.period for task in tasks]
     hyper_period = math.lcm(*periods)
     sim_horizon = hyper_period
 
-
     schedule = []
 
-    for t in range(sim_horizon):  # t = 0,1,...,time_limit-1
+    for t in range(sim_horizon):  # t = 0, 1, ..., time_limit - 1
 
-        # 1) Release jobs and check for deadline misses
+        #Deadline check BEFORE releasing new jobs:
+        #If any job has reached or passed its deadline and is not finished, schedule is invalid.
         for task in tasks:
-            # New job released at multiples of period (including t=0)
+            if t >= task.next_deadline and task.time_remaining > 0:
+                return "No valid schedule"
+
+        #Release new jobs at their release times (t multiples of period)
+        for task in tasks:
             if t % task.period == 0:
-                # If previous job not finished before this release, we already missed its deadline
-                if task.time_remaining > 0 and t > task.next_deadline:
-                    return "No valid schedule"
                 task.time_remaining = task.wcet[task_modes[task.name]]
                 task.next_deadline = t + task.period
                 task.status = "ready"
 
-            # Deadline miss check for current job
-            if t > task.next_deadline and task.time_remaining > 0:
-                return "No valid schedule"
-
-        # 2) Pick ready task with earliest deadline
+        #Pick ready task with earliest deadline
         ready_tasks = [
             task for task in tasks
             if task.status == "ready" and task.time_remaining > 0
         ]
 
         if not ready_tasks:
-            # idle slot
+            #CPU is idle for this time unit
             schedule.append(("IDLE", 0))
             continue
 
@@ -266,12 +206,13 @@ def EDF_scheduler(task_modes=None):
         freq = task_modes[current_task.name]
         schedule.append((current_task.name, freq))
 
-        # 3) Execute 1 time unit
+        #Execute 1 time unit
         current_task.time_remaining -= 1
         if current_task.time_remaining == 0:
             current_task.status = "completed"
 
     return schedule
+
 
 
 def EE_EDF_scheduler():
