@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 import sys
 import math
+import itertools
 
 @dataclass
 class SystemConfig:
@@ -155,12 +156,16 @@ def RM_scheduler():
 
 	input1.close()
 		
-
-def EDF_scheduler():
-	print("Running EDF Scheduler")
+'''
+def EDF_scheduler(task_modes = None):
+	if task_modes is None:
+		task_modes = {task.name: 1188 for task in tasks}
+	else:
+		task_modes = {tasks[i].name: task_modes[i] for i in range(len(tasks))}
+	#print("Running EDF Scheduler")
 	periods = []
 	for task in tasks:
-		task.time_remaining = task.wcet[1188]
+		task.time_remaining = task.wcet[task_modes[task.name]]
 		periods.append(task.period)
 		#print(task)
 	hyper_period = math.lcm(*periods)
@@ -175,6 +180,8 @@ def EDF_scheduler():
 				upcoming_deadline = task.next_deadline
 				current_task = task
 				sys_status = "BUSY"
+			elif i >= task.next_deadline and task.time_remaining != 1:
+				return "No valid schedule"
 			elif i >= task.next_deadline:
 				task.next_deadline += task.period
 				task.status = "ready"
@@ -183,7 +190,7 @@ def EDF_scheduler():
 			schedule.append((sys_status, 0))
 		else:
 			#print(f"Current Task: {current_task.name}")
-			schedule.append((current_task.name, 1188))
+			schedule.append((current_task.name, task_modes[current_task.name]))
 			
 			if current_task.time_remaining > 1:
 				if(current_task.next_deadline < i):
@@ -192,7 +199,7 @@ def EDF_scheduler():
 				current_task.time_remaining -= 1
 				#print(f"{current_task.name} time remaining: {current_task.time_remaining}")
 			else:
-				current_task.time_remaining = current_task.wcet[1188]
+				current_task.time_remaining = current_task.wcet[task_modes[current_task.name]]
 				current_task.status = "completed"
 				upcoming_deadline = sys.maxsize
 				sys_status = "IDLE"
@@ -200,12 +207,103 @@ def EDF_scheduler():
 
 	#print(schedule)
 	return schedule
+'''
+def EDF_scheduler(task_modes=None):
+    # Map task names -> frequency mode
+    if task_modes is None:
+        task_modes = {task.name: 1188 for task in tasks}
+    else:
+        task_modes = {tasks[i].name: task_modes[i] for i in range(len(tasks))}
+
+    # Make sure tasks are in a known initial state
+    for task in tasks:
+        task.next_deadline = task.period     # first deadline at end of first period
+        task.time_remaining = 0              # no job released yet
+        task.status = "ready"                # ready to get first job
+
+    # Using hyperperiod
+    
+    periods = []
+    for task in tasks:
+        task.time_remaining = task.wcet[task_modes[task.name]]
+        periods.append(task.period)
+        #print(task)
+    hyper_period = math.lcm(*periods)
+    sim_horizon = hyper_period
+
+
+    schedule = []
+
+    for t in range(sim_horizon):  # t = 0,1,...,time_limit-1
+
+        # 1) Release jobs and check for deadline misses
+        for task in tasks:
+            # New job released at multiples of period (including t=0)
+            if t % task.period == 0:
+                # If previous job not finished before this release, we already missed its deadline
+                if task.time_remaining > 0 and t > task.next_deadline:
+                    return "No valid schedule"
+                task.time_remaining = task.wcet[task_modes[task.name]]
+                task.next_deadline = t + task.period
+                task.status = "ready"
+
+            # Deadline miss check for current job
+            if t > task.next_deadline and task.time_remaining > 0:
+                return "No valid schedule"
+
+        # 2) Pick ready task with earliest deadline
+        ready_tasks = [
+            task for task in tasks
+            if task.status == "ready" and task.time_remaining > 0
+        ]
+
+        if not ready_tasks:
+            # idle slot
+            schedule.append(("IDLE", 0))
+            continue
+
+        current_task = min(ready_tasks, key=lambda tk: tk.next_deadline)
+        freq = task_modes[current_task.name]
+        schedule.append((current_task.name, freq))
+
+        # 3) Execute 1 time unit
+        current_task.time_remaining -= 1
+        if current_task.time_remaining == 0:
+            current_task.status = "completed"
+
+    return schedule
+
 
 def EE_EDF_scheduler():
-	print("Running Energy Efficient EDF Scheduler")
+	#print("Running Energy Efficient EDF Scheduler")
+	values = [1188, 918, 648, 384]
+	schedule = []
+	best_energy = sys.maxsize
+	best_schedule = []
+	for combo in itertools.product(values, repeat = sys_conf.task_quantity):
+		reset_tasks()
+		modes_list = list(combo)
+		print(f" Testing: {modes_list}")
+		schedule = EDF_scheduler(modes_list)
+		schedule = schedule[:1501]
+	
+		if isinstance(schedule, list):
+			result = executor(schedule, 0)
+			if result[0] < best_energy:
+				best_energy = result[0]
+				print(f"{best_energy}")
+				best_schedule = schedule
+	return best_schedule
 
 def EE_RM_scheduler():
-	print("Running Energy Efficient RM Scheduler")
+	#print("Running Energy Efficient RM Scheduler")
+	pass	
+
+def reset_tasks():
+	for task in tasks:
+		task.next_deadline = task.period
+		task.time_remaining = 0
+		task.status = "ready"
 
 dispatch = {
 	("RM", None):RM_scheduler,
