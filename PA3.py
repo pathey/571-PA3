@@ -59,6 +59,9 @@ def EDF_scheduler():
 			schedule.append((current_task.name, 1188))
 			
 			if current_task.time_remaining > 1:
+				if(current_task.next_deadline < i):
+					bad_timing = "No valid schedule"
+					return bad_timing
 				current_task.time_remaining -= 1
 				#print(f"{current_task.name} time remaining: {current_task.time_remaining}")
 			else:
@@ -126,12 +129,13 @@ def task_constructor(task_line) -> Task:
 		wcet = wcet
 	)
 
-def executor(schedule):
+def executor(schedule, output=1):
 	total_energy = 0	#total energy consumed during full 1000 seconds
 	c_t_energy = 0		#energy consumed by currently/most recently run taks
 	c_t_exec_time = 0	#how long currently/most recently run task ran for
 	c_t_start_time = 0	#when the current/most recently run task started
 	c_t_name = None
+	time_spent_idle = 0
 	for i in range(1, 1002):
 		if i == 1:
 			c_t_name = schedule[0][0]
@@ -141,10 +145,14 @@ def executor(schedule):
 			total_energy += c_t_energy
 		else:
 			if schedule[i-1][0] != c_t_name or i > 1000:
+				if output == 1:
+					c_t_e_j = c_t_energy / 1000.000
+					if c_t_name == "IDLE":
+						print(f"{c_t_start_time} {c_t_name} IDLE {c_t_exec_time} {c_t_e_j}")
+					else:
+						print(f"{c_t_start_time} {c_t_name} {schedule[i-2][1]} {c_t_exec_time} {c_t_e_j}")
 				if c_t_name == "IDLE":
-					print(f"{c_t_start_time} {c_t_name} IDLE {c_t_exec_time} {c_t_energy}mJ")
-				else:
-					print(f"{c_t_start_time} {c_t_name} {schedule[i-2][1]} {c_t_exec_time} {c_t_energy}mJ")
+					time_spent_idle += c_t_exec_time
 				c_t_name = schedule[i-1][0]
 				c_t_start_time = i-1
 				c_t_exec_time = 0
@@ -152,7 +160,13 @@ def executor(schedule):
 			c_t_exec_time += 1
 			c_t_energy += sys_conf.active_power[schedule[i-1][1]]
 			total_energy += sys_conf.active_power[schedule[i-1][1]]
-	print(f"Total Energy: {total_energy}")
+
+	percent_idle = (time_spent_idle / 1000) * 100
+	total_sys_exec_time = 1000 - time_spent_idle	
+	total_energy = total_energy / 1000.000
+	ept = [total_energy, percent_idle, total_sys_exec_time]
+
+	return ept
 
 
 input_file = sys.argv[1]
@@ -176,4 +190,11 @@ schedule = []
 scheduler = dispatch[(policy, energy_efficient)]
 schedule = scheduler()
 
-executor(schedule)
+result = []
+
+if (isinstance(schedule, list)):
+	result = executor(schedule)
+else:
+	print(schedule)
+
+print(f"{result[0]} {result[1]}% {result[2]}")
