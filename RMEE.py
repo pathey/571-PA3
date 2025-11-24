@@ -178,7 +178,7 @@ for line in lines:          #create taskInfo_RMEE array from txt file
 
 numTasks_RMEE = taskInfo_RMEE[0][0]
 taskList_RMEE = taskInfo_RMEE[1:]
-# taskList_RMEE.sort(key = lambda task: task[1])   #sort by earliest deadline first
+taskList_RMEE.sort(key = lambda task: task[1])   #sort by earliest deadline first
 
 if RMEEScheduleCheck(numTasks_RMEE, taskList_RMEE):     #Is RM a valid scheduling method for our task list? if yes proceed
     for i in range(len(taskList_RMEE)):          #compute hyperPeriod_RMEE
@@ -201,20 +201,36 @@ if RMEEScheduleCheck(numTasks_RMEE, taskList_RMEE):     #Is RM a valid schedulin
     print(RMEEtaskList) 
 
     RMEEtaskList.sort(key= lambda task: task[1])    #sort by earliest deadline first
+    nextTaskIndex = 1
+
+    # for i in range(taskInfo_RMEE[0][1]):
+    #     if (i % RMEEtaskList[0][1]) == 0:   #earliest deadline has highest priority to preempt
+    #         if
+    #         schedule(RMEEtaskList[currentTaskIndex_RMEE][0], RMEEtaskList[currentTaskIndex_RMEE][2], taskInfo_RMEE[0][curr_index[currentTaskIndex_RMEE]], curr_index[currentTaskIndex_RMEE])
+    #         nextTaskIndex = 1
+    #         currentTaskIndex_RMEE = nextTaskIndex
+        
+        
 
     for i in range(taskInfo_RMEE[0][1]):
 
-        if (i % RMEEtaskList[0][1]) == 0 and not lockRMEE:
+        if (i % RMEEtaskList[0][1]) == 0:
+            if lockRMEE:
+                nextTaskIndex = currentTaskIndex_RMEE
+            currentTaskIndex_RMEE = 0
             schedule(RMEEtaskList[currentTaskIndex_RMEE][0], RMEEtaskList[currentTaskIndex_RMEE][2], taskInfo_RMEE[0][curr_index[currentTaskIndex_RMEE]], curr_index[currentTaskIndex_RMEE])
             lockRMEE = True
-            lockRMEETime = RMEEtaskList[currentTaskIndex_RMEE][2]   #lockRMEE the schedule for the duration of task
-            currentTaskIndex_RMEE += 1
+            lockRMEETime = RMEEtaskList[currentTaskIndex_RMEE][2]   #lock the schedule for the duration of task
+            if not lockRMEE:
+                nextTaskIndex = currentTaskIndex_RMEE + 1
+            currentTaskIndex_RMEE = nextTaskIndex
 
         elif (not lockRMEE) and (currentTaskIndex_RMEE <= 4):
             schedule(RMEEtaskList[currentTaskIndex_RMEE][0], RMEEtaskList[currentTaskIndex_RMEE][2], taskInfo_RMEE[0][curr_index[currentTaskIndex_RMEE]], curr_index[currentTaskIndex_RMEE])
             lockRMEE = True
             lockRMEETime = RMEEtaskList[currentTaskIndex_RMEE][2]   #lockRMEE the schedule for the duration of task
-            currentTaskIndex_RMEE += 1
+            nextTaskIndex = currentTaskIndex_RMEE + 1
+            currentTaskIndex_RMEE = nextTaskIndex
         
         elif (not lockRMEE) and (currentTaskIndex_RMEE > 4):
             idleTime_RMEEScheduled = RMEEtaskList[0][1] - i % RMEEtaskList[0][1]
@@ -238,5 +254,6 @@ if RMEEScheduleCheck(numTasks_RMEE, taskList_RMEE):     #Is RM a valid schedulin
 
 else:
     pass
+
 
 input1.close()
