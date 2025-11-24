@@ -23,13 +23,30 @@ def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq = 1188):
     if scheduleTime >= 1000:
         scheduleList.append("EXECUTION TIME ENDS, VALUES BELOW ARE TOTALS")
         scheduleList.append("Execution Time: ", scheduleTime)
-        scheduleList.append("Percentage Idle Time: ", ((idleTime / scheduleTime) * 100), "%")
-        scheduleList.append("Total Energy Consumption: ", joulesTotal, "J")
+        scheduleList.append("Percentage Idle Time: ", round(((idleTime / scheduleTime) * 100), 3), "%")
+        scheduleList.append("Total Energy Consumption: ", round(joulesTotal, 3), "J")
     else:
         scheduleList.append([scheduleTime, taskName, CPU_Freq, runTime, joules])
     
     scheduleTime += runTime
     joulesTotal += joules
+
+def RMScheduleCheck(numTasks, taskList):
+    RM_Limit = numTasks * (pow(2, (1 / numTasks)) - 1)
+    RM_TaskSum = 0
+
+    for i in range(len(taskList)):
+        RM_TaskSum += (taskList[i][2] / taskList[i][1]) #Ci / Ti
+    
+    print("RM_TaskSum = ", round(RM_TaskSum, 3))
+    print("RM_Limit = ", round(RM_Limit, 3))
+    if RM_TaskSum <= RM_Limit:
+        print("RM Schedule Is VALID")
+        return True
+    else:
+        print("RM Schedule Is INVALID")
+        return False
+
 
 taskInfo = []
 
@@ -37,7 +54,7 @@ input1 = open(sys.argv[1]) #the first argument should be the name of the txt fil
 
 lines = input1.readlines()
 
-for line in lines:
+for line in lines:      #create taskInfo array from txt file
     cleanLine = line.strip().split()
 
     for index, item in enumerate(cleanLine):
@@ -46,16 +63,18 @@ for line in lines:
 
     taskInfo.append(cleanLine)
 
-tasks = taskInfo[1:]
-tasks.sort(key = lambda task: task[1])
-
-print(tasks)
-
 numTasks = taskInfo[0][0]
+taskList = taskInfo[1:]
+taskList.sort(key = lambda task: task[1])
 
-for i in range(numTasks):
-    i += 1
-    taskInfo[i][0]
+print(len(taskList))
+
+if RMScheduleCheck(numTasks, taskList):
+    pass
+else:
+    pass
+
+
 
 #below is schedule function and print test code
 # schedule("w1", 30)
