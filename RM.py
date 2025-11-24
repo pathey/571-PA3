@@ -20,6 +20,7 @@ def schedule(taskName, runTime, CPU_Power = 625, CPU_Freq = 1188):
     if taskName == "IDLE":
         joules = (taskInfo_RM[0][6] * 0.001) * runTime #taskInfo_RM[0][6] is IDLE CPU_Power at lowest freq
         idleTime_RM += runTime
+        CPU_Freq = "IDLE"
     else:
         joules = (CPU_Power * 0.001) * runTime      #CPU_power given in mW
 
