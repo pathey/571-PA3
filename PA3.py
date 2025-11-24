@@ -319,9 +319,10 @@ schedule = scheduler()
 
 result = []
 
-if (isinstance(schedule, list)):
-	result = executor(schedule)
-else:
-	print(schedule)
+if policy == "EDF":
+	if (isinstance(schedule, list)):
+		result = executor(schedule)
+	else:
+		print(schedule)
 
-print(f"{result[0]} {result[1]}% {result[2]}")
+	print(f"{result[0]} {result[1]}% {result[2]}")
